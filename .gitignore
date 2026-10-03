@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+*.pyo
+*.so
+.python-version
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.eggs/
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Backend local DB/log artifacts
+*.db
+*.sqlite
+*.sqlite3
+*.log
+
+# Node / Frontend
+node_modules/
+dist/
+build/
+coverage/
+frontend/coverage/
+.pnpm-store/
+
+# Vite cache
+frontend/.vite/
+
+# Environment files
+# Both apps keep real secrets here (backend/.env holds DB_PASSWORD and
+# JWT_SECRET, frontend/.env holds VITE_API_URL). Never commit them.
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# Tooling caches
+.eslintcache
+.stylelintcache
+*.tsbuildinfo
+.npm/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Misc
+*.tmp
+*.swp
+*.orig
+*.rej
