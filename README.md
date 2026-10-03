@@ -196,6 +196,30 @@ user-event) break React's `act()` wiring and produce a wall of warnings, so
 
 ---
 
+## Deploy
+
+**Frontend (Vercel).** Import `Meeti09/Portfolio-AI` in the Vercel dashboard with
+these settings:
+
+| Setting          | Value                    |
+| ---------------- | ------------------------ |
+| Root Directory   | `frontend`               |
+| Framework Preset | Vite                     |
+| Build Command    | `npm run build`          |
+| Output Directory | `dist`                   |
+| Environment      | `VITE_API_URL` = your API origin |
+
+`frontend/vercel.json` already carries the build settings plus an SPA fallback,
+so direct links like `/dashboard` and `/portfolio` resolve instead of 404ing.
+
+**Backend (not Vercel).** The API is a long-running FastAPI process backed by
+MySQL, which Vercel's serverless platform does not host. Deploy it on a service
+built for that shape — Render, Railway, Fly.io, or any VM — along with a managed
+MySQL 8 database, then point `VITE_API_URL` at it. Until then the deployed UI
+can load, but login and allocation calls need a reachable API.
+
+---
+
 ## Layout
 
 ```
