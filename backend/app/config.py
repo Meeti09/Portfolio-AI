@@ -30,6 +30,14 @@ class Settings(BaseSettings):
     db_name: str = "investment_engine"
     db_user: str = "inv_app"
     db_password: str = ""
+    # How to handle TLS to MySQL. Managed providers differ: Railway accepts
+    # plain connections, Aiven mandates TLS with its CA certificate.
+    #   PREFERRED: connector default (try TLS, fall back if unsupported)
+    #   REQUIRED:  refuse to connect without TLS; set DB_SSL_CA when the
+    #              provider issues its own CA certificate
+    #   DISABLED:  plain TCP only
+    db_ssl_mode: str = "PREFERRED"
+    db_ssl_ca: str = ""
 
     # ---- Auth ----
     jwt_secret: str = Field(default="")
@@ -45,6 +53,16 @@ class Settings(BaseSettings):
     @property
     def cors_origin_list(self) -> list[str]:
         return [origin.strip() for origin in self.cors_origins.split(",") if origin.strip()]
+
+    @field_validator("db_ssl_mode")
+    @classmethod
+    def _normalise_ssl_mode(cls, value: str) -> str:
+        mode = value.strip().upper()
+        if mode not in {"PREFERRED", "REQUIRED", "DISABLED"}:
+            raise ValueError(
+                "DB_SSL_MODE must be one of PREFERRED, REQUIRED or DISABLED."
+            )
+        return mode
 
     @field_validator("jwt_secret")
     @classmethod

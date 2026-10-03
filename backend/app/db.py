@@ -22,24 +22,37 @@ class DatabaseUnavailable(RuntimeError):
     """Raised when the pool cannot hand out a connection."""
 
 
+def _connect_kwargs() -> dict[str, Any]:
+    """Connection arguments, honouring the configured TLS mode."""
+    settings = get_settings()
+    kwargs: dict[str, Any] = {
+        "host": settings.db_host,
+        "port": settings.db_port,
+        "database": settings.db_name,
+        "user": settings.db_user,
+        "password": settings.db_password,
+        "autocommit": False,
+        "charset": "utf8mb4",
+        "collation": "utf8mb4_unicode_ci",
+    }
+    if settings.db_ssl_mode == "DISABLED":
+        kwargs["ssl_disabled"] = True
+    elif settings.db_ssl_mode == "REQUIRED" and settings.db_ssl_ca:
+        kwargs["ssl_ca"] = settings.db_ssl_ca
+        kwargs["ssl_verify_cert"] = True
+    return kwargs
+
+
 def get_pool() -> MySQLConnectionPool:
     """Lazily build the process wide connection pool."""
     global _pool
     if _pool is None:
-        settings = get_settings()
         try:
             _pool = MySQLConnectionPool(
                 pool_name="investment_engine_pool",
                 pool_size=10,
                 pool_reset_session=True,
-                host=settings.db_host,
-                port=settings.db_port,
-                database=settings.db_name,
-                user=settings.db_user,
-                password=settings.db_password,
-                autocommit=False,
-                charset="utf8mb4",
-                collation="utf8mb4_unicode_ci",
+                **_connect_kwargs(),
             )
         except MySQLError as exc:
             logger.error("Could not create the MySQL connection pool: %s", exc)

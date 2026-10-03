@@ -1,0 +1,48 @@
+# Render blueprint: `New → Blueprint → Meeti09/Portfolio-AI` picks this up.
+#
+# This defines the API only. Render has no managed MySQL, so the database lives
+# on an external MySQL provider (Railway and Aiven both work; see README).
+# Seed it with backend/sql/00_bootstrap.sql → 03_views.sql before deploying.
+#
+# Secrets marked `sync: false` are filled in on Render's dashboard when the
+# blueprint is applied. JWT_SECRET uses `generateValue` so Render mints a real
+# secret on first create — never commit one here.
+
+services:
+  - type: web
+    name: portfolio-ai-api
+    runtime: python
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    # Render injects $PORT; the app must bind 0.0.0.0, not localhost.
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: APP_NAME
+        value: investment-engine-api
+      - key: DEBUG
+        value: "false"
+      - key: DB_HOST
+        sync: false # e.g. caboose.proxy.rlwy.net — no default on purpose
+      - key: DB_PORT
+        value: "3306" # managed providers often use a custom port; adjust
+      - key: DB_NAME
+        value: investment_engine
+      - key: DB_USER
+        sync: false # the least-privilege app user, e.g. inv_app
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_SSL_MODE
+        value: PREFERRED # REQUIRED + DB_SSL_CA for providers that mandate TLS
+      - key: DB_SSL_CA
+        sync: false # path to the provider CA bundle, if one is needed
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: REFRESH_TOKEN_EXPIRE_DAYS
+        value: "7"
+      - key: CORS_ORIGINS
+        value: https://portfolio-ai-ten-steel.vercel.app

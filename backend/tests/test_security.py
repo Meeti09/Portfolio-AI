@@ -171,3 +171,42 @@ def test_cors_origins_split_on_commas() -> None:
     assert settings.cors_origin_list == [
         origin.strip() for origin in settings.cors_origins.split(",")
     ]
+
+
+def test_ssl_mode_defaults_to_preferred() -> None:
+    from app.config import Settings
+
+    assert Settings(
+        jwt_secret="a" * 32, db_ssl_mode="preferred"
+    ).db_ssl_mode == "PREFERRED"
+
+
+def test_ssl_mode_rejects_unknown_values() -> None:
+    from pydantic import ValidationError
+
+    from app.config import Settings
+
+    with pytest.raises(ValidationError, match="DB_SSL_MODE"):
+        Settings(jwt_secret="a" * 32, db_ssl_mode="sometimes")
+
+
+def test_connect_kwargs_honour_disabled_tls(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app import db
+    from app.config import get_settings
+
+    monkeypatch.setenv("DB_SSL_MODE", "DISABLED")
+    get_settings.cache_clear()
+    try:
+        assert db._connect_kwargs()["ssl_disabled"] is True
+    finally:
+        get_settings.cache_clear()
+
+
+def test_connect_kwargs_default_to_connector_tls() -> None:
+    from app import db
+
+    kwargs = db._connect_kwargs()
+    assert "ssl_disabled" not in kwargs
+    assert "ssl_ca" not in kwargs

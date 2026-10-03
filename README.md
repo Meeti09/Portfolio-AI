@@ -213,10 +213,22 @@ these settings:
 so direct links like `/dashboard` and `/portfolio` resolve instead of 404ing.
 
 **Backend (not Vercel).** The API is a long-running FastAPI process backed by
-MySQL, which Vercel's serverless platform does not host. Deploy it on a service
-built for that shape — Render, Railway, Fly.io, or any VM — along with a managed
-MySQL 8 database, then point `VITE_API_URL` at it. Until then the deployed UI
-can load, but login and allocation calls need a reachable API.
+MySQL, which Vercel's serverless platform does not host. Deploy it on Render
+from the `render.yaml` blueprint at the repo root:
+
+1. Create a managed MySQL database (Railway is the path of least resistance;
+   Aiven works too — set `DB_SSL_MODE=REQUIRED` plus `DB_SSL_CA` for it).
+2. Seed it from your machine with `backend/sql/00_bootstrap.sql` through
+   `03_views.sql`, pointed at the managed host
+   (`scripts/setup-database.ps1 -MysqlHost <host> -MysqlPort <port> -DbRootUser <admin>`).
+3. In Render: `New → Blueprint`, select this repo, fill in the `sync: false`
+   variables (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, …). `JWT_SECRET` is minted
+   automatically.
+4. Point the frontend's `VITE_API_URL` at the Render service URL and redeploy
+   the frontend.
+
+Until then the deployed UI can load, but login and allocation calls need a
+reachable API.
 
 ---
 
