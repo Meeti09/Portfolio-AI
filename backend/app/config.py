@@ -10,7 +10,18 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
-_PLACEHOLDER_SECRETS = {"", "replace_with_a_long_random_string", "change_me"}
+_PLACEHOLDER_SECRETS = {
+    "",
+    "replace_with_a_long_random_string",
+    "change_me",
+    "changeme",
+    # Render dashboard placeholders users sometimes paste literally instead of
+    # clicking "Generate" (see render.yaml generateValue). Rejected with the
+    # actionable message below instead of the confusing length error.
+    "<generate on render>",
+    "<generate-on-render>",
+    "generate on render",
+}
 
 
 class Settings(BaseSettings):
@@ -67,12 +78,14 @@ class Settings(BaseSettings):
     @field_validator("jwt_secret")
     @classmethod
     def _reject_placeholder_secret(cls, value: str) -> str:
-        if value.strip() in _PLACEHOLDER_SECRETS:
+        if value.strip().lower() in _PLACEHOLDER_SECRETS:
             # Refuse to boot rather than sign tokens with a public secret.
             raise ValueError(
-                "JWT_SECRET is missing or still the placeholder value. "
-                "Copy .env.example to .env and set a unique secret: "
-                'python -c "import secrets; print(secrets.token_urlsafe(48))"'
+                "JWT_SECRET is missing or still a placeholder value. "
+                "On Render: open the service → Environment, delete the "
+                "placeholder and click Generate (or paste a value from "
+                "'python -c \"import secrets; print(secrets.token_urlsafe(48))\"'). "
+                "Locally: copy .env.example to .env and set a unique secret."
             )
         if len(value) < 32:
             raise ValueError("JWT_SECRET must be at least 32 characters long.")

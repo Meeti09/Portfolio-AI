@@ -33,9 +33,9 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: DB_SSL_MODE
-        value: PREFERRED # REQUIRED for Aiven (mandates TLS — see DB_SSL_CA)
+        value: REQUIRED # Aiven mandates TLS; Railway also accepts it
       - key: DB_SSL_CA
-        sync: false # e.g. certs/aiven-ca.pem after committing the provider CA
+        value: ca.pem # provider CA committed at backend/ca.pem (rootDir=backend)
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_ALGORITHM

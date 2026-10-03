@@ -218,12 +218,32 @@ def test_connect_kwargs_resolve_a_relative_ca_against_backend_dir(
     from app import db
     from app.config import BACKEND_DIR, get_settings
 
+    # backend/ca.pem is committed, so resolution is exercised against a real file.
     monkeypatch.setenv("DB_SSL_MODE", "REQUIRED")
-    monkeypatch.setenv("DB_SSL_CA", "certs/aiven-ca.pem")
+    monkeypatch.setenv("DB_SSL_CA", "ca.pem")
     get_settings.cache_clear()
     try:
         kwargs = db._connect_kwargs()
-        assert kwargs["ssl_ca"] == str(BACKEND_DIR / "certs/aiven-ca.pem")
+        assert kwargs["ssl_ca"] == str(BACKEND_DIR / "ca.pem")
         assert kwargs["ssl_verify_cert"] is True
+    finally:
+        get_settings.cache_clear()
+
+
+def test_connect_kwargs_missing_ca_falls_back_to_default_tls(
+    monkeypatch: pytest.MonkeyPatch,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    from app import db
+    from app.config import get_settings
+
+    monkeypatch.setenv("DB_SSL_MODE", "REQUIRED")
+    monkeypatch.setenv("DB_SSL_CA", "certs/does-not-exist.pem")
+    get_settings.cache_clear()
+    try:
+        with caplog.at_level("WARNING", logger="app.db"):
+            kwargs = db._connect_kwargs()
+        assert "ssl_ca" not in kwargs
+        assert "not found" in caplog.text
     finally:
         get_settings.cache_clear()

@@ -38,15 +38,24 @@ def _connect_kwargs() -> dict[str, Any]:
     }
     if settings.db_ssl_mode == "DISABLED":
         kwargs["ssl_disabled"] = True
-    elif settings.db_ssl_mode == "REQUIRED" and settings.db_ssl_ca:
+    elif settings.db_ssl_mode == "REQUIRED":
         # Relative paths resolve against backend/, so the Render blueprint can
-        # use DB_SSL_CA=certs/aiven-ca.pem after the provider CA is committed
-        # there. A CA certificate is public key material, not a secret.
-        ca_path = Path(settings.db_ssl_ca)
-        if not ca_path.is_absolute():
-            ca_path = BACKEND_DIR / ca_path
-        kwargs["ssl_ca"] = str(ca_path)
-        kwargs["ssl_verify_cert"] = True
+        # use DB_SSL_CA=ca.pem with the provider CA committed at backend/ca.pem.
+        # A CA certificate is public key material, not a secret.
+        raw_ca = (settings.db_ssl_ca or "").strip()
+        if raw_ca:
+            ca_path = Path(raw_ca)
+            if not ca_path.is_absolute():
+                ca_path = BACKEND_DIR / ca_path
+            if ca_path.is_file():
+                kwargs["ssl_ca"] = str(ca_path)
+                kwargs["ssl_verify_cert"] = True
+            else:
+                logger.warning(
+                    "DB_SSL_CA=%s not found; connecting with TLS but without "
+                    "a custom CA bundle.",
+                    raw_ca,
+                )
     return kwargs
 
 
