@@ -1,0 +1,20 @@
+# Local-only files that must never be uploaded to Vercel.
+# The deployed site is the frontend; the API and database stay where they are.
+
+# Secrets (examples stay: *.env.example)
+backend/.env
+frontend/.env
+frontend/.env.local
+.env.local
+
+# Heavy / generated
+backend/.venv/
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+backend/__pycache__/
+**/__pycache__/
+**/*.pyc
+.pytest_cache/
+.vercel/
+.git/

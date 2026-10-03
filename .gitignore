@@ -60,3 +60,6 @@ desktop.ini
 *.swp
 *.orig
 *.rej
+
+.vercel
+.env*
