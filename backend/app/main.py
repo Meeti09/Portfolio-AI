@@ -42,6 +42,11 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
         allow_headers=["Authorization", "Content-Type"],
+        # An HTTPS page (e.g. the Vercel deployment) calling this API over
+        # plain HTTP on localhost is a public-to-private request. Browsers
+        # preflight it and silently drop the call without this opt-in — the UI
+        # then reports a bare "Network error" while the API is healthy.
+        allow_private_network=True,
     )
 
     @application.exception_handler(DatabaseUnavailable)

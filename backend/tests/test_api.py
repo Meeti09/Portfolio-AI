@@ -105,6 +105,25 @@ def test_openapi_schema_builds(client: TestClient) -> None:
     assert client.get("/openapi.json").status_code == 200
 
 
+def test_private_network_preflight_is_accepted(client: TestClient) -> None:
+    """HTTPS frontends calling a local HTTP API are public-to-private requests.
+
+    Browsers preflight them with Access-Control-Request-Private-Network and
+    drop the call without the opt-in header — surfacing as a bare "Network
+    error" while the API is healthy.
+    """
+    response = client.options(
+        "/login",
+        headers={
+            "Origin": "http://localhost:5173",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Private-Network": "true",
+        },
+    )
+    assert response.status_code == 200, response.text
+    assert response.headers.get("access-control-allow-private-network") == "true"
+
+
 # ---------------------------------------------------------------------------
 # Signup
 # ---------------------------------------------------------------------------
