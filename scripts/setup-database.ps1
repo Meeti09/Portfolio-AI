@@ -15,16 +15,23 @@
     backend\.env. Prompted for if omitted.
 
 .PARAMETER DbRootUser
-    MySQL administrative account. Defaults to root.
+    MySQL administrative account. Defaults to root. On Aiven this is avnadmin.
+
+.PARAMETER DbAppHost
+    Host part of the 'inv_app' user. Keep 'localhost' for local MySQL; use '%'
+    for a hosted database reached over the network (e.g. Aiven).
 
 .EXAMPLE
     .\scripts\setup-database.ps1
+.EXAMPLE
+    .\scripts\setup-database.ps1 -MysqlHost <aiven-host> -MysqlPort 21399 -DbRootUser avnadmin -DbAppHost '%'
 #>
 
 [CmdletBinding()]
 param(
     [string]$AppPassword,
     [string]$DbRootUser = 'root',
+    [string]$DbAppHost = 'localhost',
     [string]$MysqlHost = 'localhost',
     [int]$MysqlPort = 3306
 )
@@ -46,7 +53,8 @@ if ([string]::IsNullOrWhiteSpace($AppPassword)) {
 }
 
 $backendEnv = Join-Path $root 'backend\.env'
-if (Test-Path $backendEnv) {
+$isLocal = $MysqlHost -eq 'localhost' -or $MysqlHost -eq '127.0.0.1'
+if ($isLocal -and (Test-Path $backendEnv)) {
     $configured = Get-Content $backendEnv |
         Where-Object { $_ -match '^DB_PASSWORD=' } |
         Select-Object -First 1
@@ -56,6 +64,8 @@ if (Test-Path $backendEnv) {
             Write-Warning 'The password you entered differs from DB_PASSWORD in backend\.env. Update that file or the API will fail to connect.'
         }
     }
+} elseif (-not $isLocal) {
+    Write-Warning 'Remote database: set DB_PASSWORD on Render to the password you just entered.'
 }
 
 $ordered = @('00_bootstrap.sql', '01_schema.sql', '02_seed.sql', '03_views.sql')
@@ -66,17 +76,18 @@ foreach ($file in $ordered) {
     }
 }
 
-# Quote the password for the SET statement, doubling any single quotes.
-$escaped = $AppPassword.Replace("'", "''")
+# Quote the session values for the SET statement, doubling single quotes.
+$escapedPassword = $AppPassword.Replace("'", "''")
+$escapedHost = $DbAppHost.Replace("'", "''")
 
 Write-Host '==> Applying SQL (00_bootstrap -> 03_views)' -ForegroundColor Cyan
 foreach ($file in $ordered) {
     $path = Join-Path $sqlDir $file
     Write-Host "    $file" -ForegroundColor DarkGray
 
-    # Only 00_bootstrap needs the session variable; the rest are plain scripts.
+    # Only 00_bootstrap needs the session variables; the rest are plain scripts.
     if ($file -eq '00_bootstrap.sql') {
-        $command = "SET @app_password='$escaped'; SOURCE $($path -replace '\\','/');"
+        $command = "SET @app_password='$escapedPassword'; SET @app_user_host='$escapedHost'; SOURCE $($path -replace '\\','/');"
     } else {
         $command = "SOURCE $($path -replace '\\','/');"
     }

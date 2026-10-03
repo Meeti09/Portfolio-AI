@@ -214,18 +214,22 @@ so direct links like `/dashboard` and `/portfolio` resolve instead of 404ing.
 
 **Backend (not Vercel).** The API is a long-running FastAPI process backed by
 MySQL, which Vercel's serverless platform does not host. Deploy it on Render
-from the `render.yaml` blueprint at the repo root:
+from the `render.yaml` blueprint at the repo root, with the database on
+**Aiven's free MySQL tier** (free forever, no credit card — 1 GB storage/RAM,
+single node, plenty for this app):
 
-1. Create a managed MySQL database (Railway is the path of least resistance;
-   Aiven works too — set `DB_SSL_MODE=REQUIRED` plus `DB_SSL_CA` for it).
-2. Seed it from your machine with `backend/sql/00_bootstrap.sql` through
-   `03_views.sql`, pointed at the managed host
-   (`scripts/setup-database.ps1 -MysqlHost <host> -MysqlPort <port> -DbRootUser <admin>`).
-3. In Render: `New → Blueprint`, select this repo, fill in the `sync: false`
-   variables (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, …). `JWT_SECRET` is minted
-   automatically.
-4. Point the frontend's `VITE_API_URL` at the Render service URL and redeploy
-   the frontend.
+1. At `aiven.io`, create a free MySQL service. From its overview page copy the
+   host, port, `avnadmin` user and password — and download the **CA certificate**,
+   saving it as `backend/certs/aiven-ca.pem` (a CA cert is public, safe to commit).
+2. Seed it from your machine (admin user, app user on `'%'` since the API
+   connects over the network):
+   `scripts/setup-database.ps1 -MysqlHost <host> -MysqlPort <port> -DbRootUser avnadmin -DbAppHost '%'`
+3. In Render: `New → Blueprint`, select this repo, and fill in the `sync: false`
+   variables (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`,
+   `DB_SSL_MODE=REQUIRED`, `DB_SSL_CA=certs/aiven-ca.pem`). `JWT_SECRET` is
+   minted automatically.
+4. Commit the CA file if you haven't, then point the frontend's `VITE_API_URL`
+   at the Render service URL and redeploy the frontend.
 
 Until then the deployed UI can load, but login and allocation calls need a
 reachable API.

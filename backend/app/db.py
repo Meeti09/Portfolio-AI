@@ -5,13 +5,14 @@ from __future__ import annotations
 import logging
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 from typing import Any
 
 import mysql.connector
 from mysql.connector import Error as MySQLError
 from mysql.connector.pooling import MySQLConnectionPool, PooledMySQLConnection
 
-from app.config import get_settings
+from app.config import BACKEND_DIR, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,13 @@ def _connect_kwargs() -> dict[str, Any]:
     if settings.db_ssl_mode == "DISABLED":
         kwargs["ssl_disabled"] = True
     elif settings.db_ssl_mode == "REQUIRED" and settings.db_ssl_ca:
-        kwargs["ssl_ca"] = settings.db_ssl_ca
+        # Relative paths resolve against backend/, so the Render blueprint can
+        # use DB_SSL_CA=certs/aiven-ca.pem after the provider CA is committed
+        # there. A CA certificate is public key material, not a secret.
+        ca_path = Path(settings.db_ssl_ca)
+        if not ca_path.is_absolute():
+            ca_path = BACKEND_DIR / ca_path
+        kwargs["ssl_ca"] = str(ca_path)
         kwargs["ssl_verify_cert"] = True
     return kwargs
 

@@ -33,9 +33,9 @@ services:
       - key: DB_PASSWORD
         sync: false
       - key: DB_SSL_MODE
-        value: PREFERRED # REQUIRED + DB_SSL_CA for providers that mandate TLS
+        value: PREFERRED # REQUIRED for Aiven (mandates TLS — see DB_SSL_CA)
       - key: DB_SSL_CA
-        sync: false # path to the provider CA bundle, if one is needed
+        sync: false # e.g. certs/aiven-ca.pem after committing the provider CA
       - key: JWT_SECRET
         generateValue: true
       - key: JWT_ALGORITHM

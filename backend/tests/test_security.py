@@ -210,3 +210,20 @@ def test_connect_kwargs_default_to_connector_tls() -> None:
     kwargs = db._connect_kwargs()
     assert "ssl_disabled" not in kwargs
     assert "ssl_ca" not in kwargs
+
+
+def test_connect_kwargs_resolve_a_relative_ca_against_backend_dir(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from app import db
+    from app.config import BACKEND_DIR, get_settings
+
+    monkeypatch.setenv("DB_SSL_MODE", "REQUIRED")
+    monkeypatch.setenv("DB_SSL_CA", "certs/aiven-ca.pem")
+    get_settings.cache_clear()
+    try:
+        kwargs = db._connect_kwargs()
+        assert kwargs["ssl_ca"] == str(BACKEND_DIR / "certs/aiven-ca.pem")
+        assert kwargs["ssl_verify_cert"] is True
+    finally:
+        get_settings.cache_clear()
